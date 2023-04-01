@@ -219,16 +219,16 @@ def plot_multiple(causal, act):
     plt_col = 2
     fig, ax = plt.subplots(plt_row, plt_col, figsize=(7 * plt_col, 5 * plt_row), sharex=False, sharey=True)
 
-    ax[0, 0].set_title('causal')
-    ax[0, 1].set_title('act')
+    ax[0].set_title('causal')
+    ax[1].set_title('act')
 
-    ax[0, 0].scatter(causal[:, 0].astype(int), causal[:, 1],
+    ax[0].scatter(causal[:, 0].astype(int), causal[:, 1],
                          color='b')
-    ax[0, 0].legend()
+    ax[0].legend()
 
-    ax[0, 1].scatter(act[:, 0].astype(int), act[:, 1],
+    ax[1].scatter(act[:, 0].astype(int), act[:, 1],
                          color='b')
-    ax[0, 1].legend()
+    ax[1].legend()
 
 
     plt.savefig(args.result_dir + "/plt.png")
