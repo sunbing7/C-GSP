@@ -31,7 +31,6 @@ def solve_causal(data_loader, model, arch, target_class, num_sample, split_layer
         if use_cuda:
             gt = gt.cuda()
             input = input.cuda()
-            uap = uap.cuda()
 
         # compute output
         with torch.no_grad():
