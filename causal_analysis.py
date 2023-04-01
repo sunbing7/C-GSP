@@ -99,8 +99,7 @@ def solve_act(data_loader, model, arch, target_class, num_sample, split_layer=43
     model2.eval()
 
     total_num_samples = 0
-    out = []
-    do_predict_avg = []
+    dense_avg = []
     for input, gt in data_loader:
         if total_num_samples >= num_sample:
             break
@@ -111,20 +110,17 @@ def solve_act(data_loader, model, arch, target_class, num_sample, split_layer=43
         # compute output
         with torch.no_grad():
             dense_output = model1(input)
+            dense_this = np.mean(dense_output.cpu().detach().numpy(), axis=0)  # 4096
 
-            dense_hidden_ = torch.clone(torch.reshape(dense_output, (dense_output.shape[0], -1)))
-            dense_hidden_ = dense_hidden_.cpu().detach().numpy()
-
-        do_predict_avg.append(dense_hidden_)  # batchx4096x11
+        dense_avg.append(dense_this) #batchx4096
         total_num_samples += len(gt)
     # average of all baches
-    do_predict_avg = np.mean(np.array(do_predict_avg), axis=0)  # 4096x10
+    dense_avg = np.mean(np.array(dense_avg), axis=0)  # 4096x10
     # insert neuron index
-    idx = np.arange(0, len(do_predict_avg), 1, dtype=int)
-    do_predict_avg = np.c_[idx, do_predict_avg]
-    out = do_predict_avg[:, [0, (target_class + 1)]]
+    idx = np.arange(0, len(dense_avg), 1, dtype=int)
+    dense_avg = np.c_[idx, dense_avg]
 
-    return out
+    return dense_avg
 
 def split_model(ori_model, model_name, split_layer=43):
     '''
@@ -217,10 +213,10 @@ class Flatten(nn.Module):
 
 def causality_analysis():
     model_t = load_model(args)
-    if device != 'cpu':
+    if str(device) != 'cpu':
         model_t = model_t.cuda()
     '''
-    if device == 'cuda:0':
+    if str(device) == 'cuda:0':
         model_t = nn.DataParallel(model_t).cuda()
     else:
         model_t = nn.DataParallel(model_t)
@@ -254,7 +250,7 @@ def causality_analysis():
         test_set = datasets.ImageFolder(test_dir, data_transform)
         test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=4,
                                                   pin_memory=True)
-        neuron_ranking = solve_causal(test_loader, model_t, args.model_t, class_ids[idx], 1000, split_layer=43, use_cuda=(device != 'cpu'))
+        neuron_ranking = solve_causal(test_loader, model_t, args.model_t, class_ids[idx], 1000, split_layer=43, use_cuda=(str(device) != 'cpu'))
         # find outstanding neuron neuron_ranking shape: 4096x2
         temp = neuron_ranking
         ind = np.argsort(temp[:, 1])[::-1]
@@ -268,7 +264,7 @@ def causality_analysis():
 
 def activation_analysis():
     model_t = load_model(args)
-    if device != 'cpu':
+    if str(device) != 'cpu':
         model_t = model_t.cuda()
 
     model_t.eval()
@@ -299,7 +295,7 @@ def activation_analysis():
         test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=4,
                                                   pin_memory=True)
         neuron_ranking = solve_act(test_loader, model_t, args.model_t, class_ids[idx], 1000, split_layer=43,
-                                      use_cuda=(device != 'cpu'))
+                                      use_cuda=(str(device) != 'cpu'))
         # find outstanding neuron neuron_ranking shape: 4096x2
         temp = neuron_ranking
         ind = np.argsort(temp[:, 1])[::-1]
