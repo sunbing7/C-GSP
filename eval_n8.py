@@ -20,7 +20,7 @@ parser.add_argument('--is_nips', action='store_true', default=True, help='Evalua
 parser.add_argument('--batch_size', type=int, default=5, help='Batch Size')
 parser.add_argument('--eps', type=int, default=16, help='Perturbation Budget')
 parser.add_argument('--model_type', type=str, default= 'incv3',  help ='Model type incv3, res152')
-parser.add_argument('--load_path', type=str, default='checkpoints/model.pth', help='load path')
+parser.add_argument('--load_path', type=str, default='checkpoints/model-inv3-epoch9.pth', help='load path')
 parser.add_argument('--label_flag', type=str, default='N8', help='label nums: N8, D1,...,D20')
 parser.add_argument('--nz', type=int, default=16, help='nz')
 parser.add_argument('--layer', type=int, default=1, help='layer')
