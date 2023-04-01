@@ -12,6 +12,7 @@ from condgenerators import ConGeneratorResnet
 from utils import *
 import torch.nn.functional as F
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description='Conditional Adversarial Generator')
 parser.add_argument('--data_dir', default='data/ImageNet1k', help='ImageNet Validation Data')
@@ -211,6 +212,28 @@ class Flatten(nn.Module):
         return x
 
 
+def plot_multiple(causal, act):
+    # plot the permutation of cmv img and test imgs
+    plt_row = 1
+
+    plt_col = 2
+    fig, ax = plt.subplots(plt_row, plt_col, figsize=(7 * plt_col, 5 * plt_row), sharex=False, sharey=True)
+
+    ax[0, 0].set_title('causal')
+    ax[0, 1].set_title('act')
+
+    ax[0, 0].scatter(causal[:, 0].astype(int), causal[:, 1],
+                         color='b')
+    ax[0, 0].legend()
+
+    ax[0, 1].scatter(act[:, 0].astype(int), act[:, 1],
+                         color='b')
+    ax[0, 1].legend()
+
+
+    plt.savefig(args.result_dir + "/plt.png")
+    # plt.show()
+
 def causality_analysis():
     model_t = load_model(args)
     if str(device) != 'cpu':
@@ -308,8 +331,20 @@ def activation_analysis():
                 outstanding_neuron)
 
 
+def plot_compare():
+    # class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
+    class_ids = np.array([150])
+    for idx in range(len(class_ids)):
+        causal = np.load(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_outstanding.npy'))
+        act = np.load(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_act.npy'))
+
+        plot_multiple(causal, act)
+
+
 if __name__ == '__main__':
     if args.option == 'causal':
         causality_analysis()
     elif args.option == 'act':
         activation_analysis()
+    elif args.option == 'plot':
+        plot_compare()
