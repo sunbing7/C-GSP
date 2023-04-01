@@ -13,6 +13,29 @@ from utils import *
 import torch.nn.functional as F
 from tqdm import tqdm
 
+parser = argparse.ArgumentParser(description='Conditional Adversarial Generator')
+parser.add_argument('--data_dir', default='data/ImageNet1k', help='ImageNet Validation Data')
+parser.add_argument('--test_dir', default='', help='Testing Data')
+parser.add_argument('--result_dir', default='', help='Result output')
+parser.add_argument('--batch_size', type=int, default=10, help='Batch Size')
+parser.add_argument('--model_t', type=str, default='res152', help='Model under attack : vgg16, vgg19, dense121')
+parser.add_argument('--layer', type=int, default=1, help='layer')
+parser.add_argument('--option', type=str, default='causal', help='Run options')
+args = parser.parse_args()
+print(args)
+
+# Normalize (0-1)
+
+n_class = 1000
+# GPU
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+print(device)
+# Input dimensions: Inception takes 3x299x299
+if args.model_t in ['incv3', 'incv4']:
+    img_size = 299
+else:
+    img_size = 224
+
 
 def solve_causal(data_loader, model, arch, target_class, num_sample, split_layer=43, use_cuda=True):
     #split the model
@@ -66,6 +89,42 @@ def solve_causal(data_loader, model, arch, target_class, num_sample, split_layer
 
     return out
 
+
+def solve_act(data_loader, model, arch, target_class, num_sample, split_layer=43, use_cuda=True):
+    #split the model
+    model1, model2 = split_model(model, arch, split_layer=split_layer)
+
+    # switch to evaluate mode
+    model1.eval()
+    model2.eval()
+
+    total_num_samples = 0
+    out = []
+    do_predict_avg = []
+    for input, gt in data_loader:
+        if total_num_samples >= num_sample:
+            break
+        if use_cuda:
+            gt = gt.cuda()
+            input = input.cuda()
+
+        # compute output
+        with torch.no_grad():
+            dense_output = model1(input)
+
+            dense_hidden_ = torch.clone(torch.reshape(dense_output, (dense_output.shape[0], -1)))
+            dense_hidden_ = dense_hidden_.cpu().detach().numpy()
+
+        do_predict_avg.append(dense_hidden_)  # batchx4096x11
+        total_num_samples += len(gt)
+    # average of all baches
+    do_predict_avg = np.mean(np.array(do_predict_avg), axis=0)  # 4096x10
+    # insert neuron index
+    idx = np.arange(0, len(do_predict_avg), 1, dtype=int)
+    do_predict_avg = np.c_[idx, do_predict_avg]
+    out = do_predict_avg[:, [0, (target_class + 1)]]
+
+    return out
 
 def split_model(ori_model, model_name, split_layer=43):
     '''
@@ -156,73 +215,105 @@ class Flatten(nn.Module):
         return x
 
 
-parser = argparse.ArgumentParser(description='Conditional Adversarial Generator')
-parser.add_argument('--data_dir', default='data/ImageNet1k', help='ImageNet Validation Data')
-parser.add_argument('--test_dir', default='', help='Testing Data')
-parser.add_argument('--result_dir', default='', help='Result output')
-parser.add_argument('--batch_size', type=int, default=10, help='Batch Size')
-parser.add_argument('--model_t', type=str, default='res152', help='Model under attack : vgg16, vgg19, dense121')
-parser.add_argument('--layer', type=int, default=1, help='layer')
-args = parser.parse_args()
-print(args)
+def causality_analysis():
+    model_t = load_model(args)
+    if device != 'cpu':
+        model_t = model_t.cuda()
+    '''
+    if device == 'cuda:0':
+        model_t = nn.DataParallel(model_t).cuda()
+    else:
+        model_t = nn.DataParallel(model_t)
+    '''
+    model_t.eval()
 
-# Normalize (0-1)
+    # Setup-Data
+    data_transform = transforms.Compose([
+        transforms.Resize(img_size),
+        transforms.ToTensor(),
+    ])
 
-n_class = 1000
-# GPU
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-print(device)
-# Input dimensions: Inception takes 3x299x299
-if args.model_t in ['incv3', 'incv4']:
-    img_size = 299
-else:
-    img_size = 224
-
-model_t = load_model(args)
-if device != 'cpu':
-    model_t = model_t.cuda()
-'''
-if device == 'cuda:0':
-    model_t = nn.DataParallel(model_t).cuda()
-else:
-    model_t = nn.DataParallel(model_t)
-'''
-model_t.eval()
-
-# Setup-Data
-data_transform = transforms.Compose([
-    transforms.Resize(img_size),
-    transforms.ToTensor(),
-])
-
-mean = [0.485, 0.456, 0.406]
-std = [0.229, 0.224, 0.225]
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
 
 
-def normalize(t):
-    t[:, 0, :, :] = (t[:, 0, :, :] - mean[0]) / std[0]
-    t[:, 1, :, :] = (t[:, 1, :, :] - mean[1]) / std[1]
-    t[:, 2, :, :] = (t[:, 2, :, :] - mean[2]) / std[2]
-    return t
+    def normalize(t):
+        t[:, 0, :, :] = (t[:, 0, :, :] - mean[0]) / std[0]
+        t[:, 1, :, :] = (t[:, 1, :, :] - mean[1]) / std[1]
+        t[:, 2, :, :] = (t[:, 2, :, :] - mean[2]) / std[2]
+        return t
 
 
-#class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
-class_ids = np.array([150])
+    #class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
+    class_ids = np.array([150])
 
-# Evaluation
-sr = np.zeros(len(class_ids))
-for idx in range(len(class_ids)):
-    test_dir = '{}_t{}'.format(args.test_dir, class_ids[idx])
-    test_set = datasets.ImageFolder(test_dir, data_transform)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=4,
-                                              pin_memory=True)
-    neuron_ranking = solve_causal(test_loader, model_t, args.model_t, class_ids[idx], 1000, split_layer=43, use_cuda=(device != 'cpu'))
-    # find outstanding neuron neuron_ranking shape: 4096x2
-    temp = neuron_ranking
-    ind = np.argsort(temp[:, 1])[::-1]
-    temp = temp[ind]
-    top = outlier_detection(temp[:, 1], max(temp[:, 1]), verbose=False)
-    outstanding_neuron = temp[0: len(top)][:, 0]
+    # Evaluation
+    sr = np.zeros(len(class_ids))
+    for idx in range(len(class_ids)):
+        test_dir = '{}_t{}'.format(args.test_dir, class_ids[idx])
+        test_set = datasets.ImageFolder(test_dir, data_transform)
+        test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=4,
+                                                  pin_memory=True)
+        neuron_ranking = solve_causal(test_loader, model_t, args.model_t, class_ids[idx], 1000, split_layer=43, use_cuda=(device != 'cpu'))
+        # find outstanding neuron neuron_ranking shape: 4096x2
+        temp = neuron_ranking
+        ind = np.argsort(temp[:, 1])[::-1]
+        temp = temp[ind]
+        top = outlier_detection(temp[:, 1], max(temp[:, 1]), verbose=False)
+        outstanding_neuron = temp[0: len(top)][:, 0]
 
-    print('total:{}, top:{}'.format(len(neuron_ranking), len(outstanding_neuron)))
-    np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_outstanding.npy'), outstanding_neuron)
+        print('total:{}, top:{}'.format(len(neuron_ranking), len(outstanding_neuron)))
+        np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_outstanding.npy'), outstanding_neuron)
+
+
+def activation_analysis():
+    model_t = load_model(args)
+    if device != 'cpu':
+        model_t = model_t.cuda()
+
+    model_t.eval()
+
+    # Setup-Data
+    data_transform = transforms.Compose([
+        transforms.Resize(img_size),
+        transforms.ToTensor(),
+    ])
+
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+
+    def normalize(t):
+        t[:, 0, :, :] = (t[:, 0, :, :] - mean[0]) / std[0]
+        t[:, 1, :, :] = (t[:, 1, :, :] - mean[1]) / std[1]
+        t[:, 2, :, :] = (t[:, 2, :, :] - mean[2]) / std[2]
+        return t
+
+    # class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
+    class_ids = np.array([150])
+
+    # Evaluation
+    sr = np.zeros(len(class_ids))
+    for idx in range(len(class_ids)):
+        test_dir = '{}_t{}'.format(args.test_dir, class_ids[idx])
+        test_set = datasets.ImageFolder(test_dir, data_transform)
+        test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=4,
+                                                  pin_memory=True)
+        neuron_ranking = solve_act(test_loader, model_t, args.model_t, class_ids[idx], 1000, split_layer=43,
+                                      use_cuda=(device != 'cpu'))
+        # find outstanding neuron neuron_ranking shape: 4096x2
+        temp = neuron_ranking
+        ind = np.argsort(temp[:, 1])[::-1]
+        temp = temp[ind]
+        top = outlier_detection(temp[:, 1], max(temp[:, 1]), verbose=False)
+        outstanding_neuron = temp[0: len(top)][:, 0]
+
+        print('total:{}, top:{}'.format(len(neuron_ranking), len(outstanding_neuron)))
+        np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_act.npy'),
+                outstanding_neuron)
+
+
+if __name__ == '__main__':
+    if args.option == 'causal':
+        causality_analysis()
+    elif args.option == 'act':
+        activation_analysis()
