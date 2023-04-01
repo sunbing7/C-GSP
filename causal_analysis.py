@@ -206,7 +206,8 @@ def normalize(t):
     return t
 
 
-class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
+#class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
+class_ids = np.array([150])
 
 # Evaluation
 sr = np.zeros(len(class_ids))
@@ -224,4 +225,4 @@ for idx in range(len(class_ids)):
     outstanding_neuron = temp[0: len(top)][:, 0]
 
     print('total:{}, top:{}'.format(len(neuron_ranking), len(outstanding_neuron)))
-    np.save(os.path.join(args.result_dir, str(args.model_t) + '_outstanding.npy'), outstanding_neuron)
+    np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_outstanding.npy'), outstanding_neuron)
