@@ -171,7 +171,7 @@ print(args)
 n_class = 1000
 # GPU
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
+print(device)
 # Input dimensions: Inception takes 3x299x299
 if args.model_t in ['incv3', 'incv4']:
     img_size = 299
@@ -179,7 +179,7 @@ else:
     img_size = 224
 
 model_t = load_model(args)
-if device == 'cuda:0':
+if device != 'cpu':
     model_t = model_t.cuda()
 '''
 if device == 'cuda:0':
