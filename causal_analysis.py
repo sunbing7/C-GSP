@@ -282,7 +282,7 @@ def causality_analysis():
         outstanding_neuron = temp[0: len(top)][:, 0]
 
         print('total:{}, top:{}'.format(len(neuron_ranking), len(outstanding_neuron)))
-        np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_outstanding.npy'), outstanding_neuron)
+        np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_outstanding.npy'), neuron_ranking)
 
 
 def activation_analysis():
@@ -328,7 +328,7 @@ def activation_analysis():
 
         print('total:{}, top:{}'.format(len(neuron_ranking), len(outstanding_neuron)))
         np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_act.npy'),
-                outstanding_neuron)
+                neuron_ranking)
 
 
 def plot_compare():
