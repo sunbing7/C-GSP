@@ -65,7 +65,7 @@ for idx in range(len(class_ids)):
     test_set = datasets.ImageFolder(test_dir, data_transform)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=4,
                                               pin_memory=True)
-    neuron_ranking = model_t(test_loader, model_t, args.model_t, class_ids[idx], 1000, split_layer=43, use_cuda=True)
+    neuron_ranking = solve_causal(test_loader, model_t, args.model_t, class_ids[idx], 1000, split_layer=43, use_cuda=True)
     # find outstanding neuron neuron_ranking shape: 4096x2
     temp = neuron_ranking
     ind = np.argsort(temp[:, 1])[::-1]
