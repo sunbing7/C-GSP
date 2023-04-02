@@ -234,6 +234,22 @@ def plot_multiple(causal, act):
     plt.savefig(args.result_dir + "/plt.png")
     # plt.show()
 
+
+def plot_single(array, title):
+    # plot the permutation of cmv img and test imgs
+    plt_row = 1
+
+    plt_col = 1
+    fig, ax = plt.subplots(plt_row, plt_col, figsize=(7 * plt_col, 5 * plt_row), sharex=False, sharey=True)
+
+    ax[0].set_title(title)
+
+    ax[0].scatter(array[:, 0].astype(int), array[:, 1],
+                         color='b')
+    ax[0].legend()
+
+    plt.savefig(args.result_dir + "/plt_" + title + ".png")
+
 def causality_analysis():
     model_t = load_model(args)
     if str(device) != 'cpu':
@@ -337,7 +353,8 @@ def plot_compare():
     for idx in range(len(class_ids)):
         causal = np.load(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_outstanding.npy'))
         act = np.load(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_act.npy'))
-
+        plot_single(causal, 'causal')
+        plot_single(act, 'act')
         plot_multiple(causal, act)
 
 
