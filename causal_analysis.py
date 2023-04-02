@@ -247,7 +247,7 @@ def plot_multiple(causal, act, normalize=False):
 
         ax.scatter(causal[:, 0].astype(int), causal[:, 1],
                    color='b')
-        ax[1].scatter(act[:, 0].astype(int), act[:, 1],
+        ax.scatter(act[:, 0].astype(int), act[:, 1],
                       color='y')
         ax.legend()
 
