@@ -313,7 +313,10 @@ def causality_analysis():
         outstanding_neuron = temp[0: len(top)][:, 0]
 
         print('total:{}, top:{}'.format(len(neuron_ranking), len(outstanding_neuron)))
-        np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_outstanding.npy'), neuron_ranking)
+        np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_outstanding.npy'),
+                neuron_ranking)
+        np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_causal_top.npy'),
+                neuron_ranking)
 
 
 def activation_analysis():
@@ -360,6 +363,8 @@ def activation_analysis():
         print('total:{}, top:{}'.format(len(neuron_ranking), len(outstanding_neuron)))
         np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_act.npy'),
                 neuron_ranking)
+        np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_act_top.npy'),
+                neuron_ranking)
 
 
 def plot_compare():
@@ -368,8 +373,10 @@ def plot_compare():
     for idx in range(len(class_ids)):
         causal = np.load(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_outstanding.npy'))
         act = np.load(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_act.npy'))
-        #plot_single(causal, 'causal')
-        #plot_single(act, 'act')
+        causal_top = np.load(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_causal_top.npy'))
+        act_top = np.load(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_act_top.npy'))
+        common = np.intersect1d(causal_top, act_top)
+        print('common outstanding neuron: {}'.format(len(common) / len(causal[:, 0])))
         plot_multiple(causal, act, True)
 
 
