@@ -216,42 +216,38 @@ def plot_multiple(causal, act, normalize=False):
     # plot the permutation of cmv img and test imgs
     plt_row = 1
 
-    plt_col = 2
+    plt_col = 3
     fig, ax = plt.subplots(plt_row, plt_col, figsize=(7 * plt_col, 5 * plt_row), sharex=False, sharey=True)
 
     ax[0].set_title('causal')
     ax[1].set_title('act')
+    ax[2].set_title('compare')
 
     if normalize:
         causal[:, 1] = causal[:, 1] / np.max(causal[:, 1])
 
     ax[0].scatter(causal[:, 0].astype(int), causal[:, 1],
-                         color='b')
+                  color='b')
     ax[0].legend()
 
     if normalize:
         act[:, 1] = act[:, 1] / np.max(act[:, 1])
 
     ax[1].scatter(act[:, 0].astype(int), act[:, 1],
-                         color='b')
+                  color='b')
     ax[1].legend()
 
+    ax[2].scatter(causal[:, 0].astype(int), causal[:, 1],
+                  color='b')
+    ax[2].legend()
+
+    ax[2].scatter(act[:, 0].astype(int), act[:, 1],
+                  color='y')
+    ax[2].legend()
 
     plt.savefig(args.result_dir + "/plt.png")
     # plt.show()
 
-    if normalize:
-        fig, ax = plt.subplots(1, 1, figsize=(7 * plt_col, 5 * plt_row), sharex=False, sharey=True)
-
-        ax.set_title('compare')
-
-        ax.scatter(causal[:, 0].astype(int), causal[:, 1],
-                   color='b')
-        ax.scatter(act[:, 0].astype(int), act[:, 1],
-                      color='y')
-        ax.legend()
-
-        plt.savefig(args.result_dir + "/plt_compare.png")
 
 
 def plot_single(array, title):
