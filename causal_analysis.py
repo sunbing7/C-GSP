@@ -242,11 +242,11 @@ def plot_single(array, title):
     plt_col = 1
     fig, ax = plt.subplots(plt_row, plt_col, figsize=(7 * plt_col, 5 * plt_row), sharex=False, sharey=True)
 
-    ax[0].set_title(title)
+    ax.set_title(title)
 
-    ax[0].scatter(array[:, 0].astype(int), array[:, 1],
+    ax.scatter(array[:, 0].astype(int), array[:, 1],
                          color='b')
-    ax[0].legend()
+    ax.legend()
 
     plt.savefig(args.result_dir + "/plt_" + title + ".png")
 
