@@ -212,7 +212,7 @@ class Flatten(nn.Module):
         return x
 
 
-def plot_multiple(causal, act, normalize=False):
+def plot_multiple(causal, act, normalize=False, t=150):
     # plot the permutation of cmv img and test imgs
     plt_row = 1
 
@@ -245,7 +245,7 @@ def plot_multiple(causal, act, normalize=False):
                   color='y')
     ax[2].legend()
 
-    plt.savefig(args.result_dir + "/plt.png")
+    plt.savefig(args.result_dir + "/plt_" + t + ".png")
     # plt.show()
 
 
@@ -294,8 +294,8 @@ def causality_analysis():
         return t
 
 
-    #class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
-    class_ids = np.array([150])
+    class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
+    #class_ids = np.array([150])
 
     # Evaluation
     sr = np.zeros(len(class_ids))
@@ -341,8 +341,8 @@ def activation_analysis():
         t[:, 2, :, :] = (t[:, 2, :, :] - mean[2]) / std[2]
         return t
 
-    # class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
-    class_ids = np.array([150])
+    class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
+    #class_ids = np.array([150])
 
     # Evaluation
     sr = np.zeros(len(class_ids))
@@ -368,8 +368,8 @@ def activation_analysis():
 
 
 def plot_compare():
-    # class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
-    class_ids = np.array([150])
+    class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
+    #class_ids = np.array([150])
     for idx in range(len(class_ids)):
         causal = np.load(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_outstanding.npy'))
         act = np.load(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_act.npy'))
@@ -377,7 +377,7 @@ def plot_compare():
         act_top = np.load(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_act_top.npy'))
         common = np.intersect1d(causal_top, act_top)
         print('common outstanding neuron: {}'.format(len(common) / len(causal[:, 0])))
-        plot_multiple(causal, act, True)
+        plot_multiple(causal, act, True, t=str(class_ids[idx]))
 
 
 if __name__ == '__main__':
