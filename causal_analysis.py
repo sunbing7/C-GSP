@@ -40,11 +40,12 @@ else:
     img_size = 224
 
 
-def solve_causal(data_loader, model, arch, target_class, num_sample, split_layer=43, use_cuda=True):
+def solve_causal(data_loader, model, arch, target_class, num_sample, normalize, split_layer=43, use_cuda=True):
     #split the model
     model1, model2 = split_model(model, arch, split_layer=split_layer)
 
     # switch to evaluate mode
+    #model.eval()
     model1.eval()
     model2.eval()
 
@@ -60,9 +61,9 @@ def solve_causal(data_loader, model, arch, target_class, num_sample, split_layer
 
         # compute output
         with torch.no_grad():
-            dense_output = model1(input)
+            dense_output = model1(normalize(input.clone().detach()))
             ori_output = model2(dense_output)
-
+            #full_output = model(normalize(input.clone().detach()))
             dense_hidden_ = torch.clone(torch.reshape(dense_output, (dense_output.shape[0], -1)))
             # ori_output = filter_model(input)
             do_predict_neu = []
@@ -311,9 +312,9 @@ def causality_analysis():
             ])
             test_file = '{}_t{}_tae.npy'.format(args.model_t, class_ids[idx],)
             test_set = CustomDataSet(os.path.join(args.test_dir, test_file), target=class_ids[idx], transform=data_transform)
-        test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=4,
+        test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=0,
                                                   pin_memory=True)
-        neuron_ranking = solve_causal(test_loader, model_t, args.model_t, class_ids[idx], 1000, split_layer=43, use_cuda=(str(device) != 'cpu'))
+        neuron_ranking = solve_causal(test_loader, model_t, args.model_t, class_ids[idx], 1000, normalize, split_layer=43, use_cuda=(str(device) != 'cpu'))
         # find outstanding neuron neuron_ranking shape: 4096x2
         temp = neuron_ranking
         ind = np.argsort(temp[:, 1])[::-1]

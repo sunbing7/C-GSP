@@ -27,7 +27,7 @@ print(args)
 n_class = 1000
 # GPU
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
+print(device)
 
 # Input dimensions: Inception takes 3x299x299
 if args.model_t in ['incv3', 'incv4']:
@@ -36,7 +36,10 @@ else:
     img_size = 224
 
 model_t = load_model(args)
-model_t = nn.DataParallel(model_t).cuda()
+if str(device) != 'cpu':
+    model_t = nn.DataParallel(model_t).cuda()
+else:
+    model_t = nn.DataParallel(model_t)
 model_t.eval()
 
 # Setup-Data
@@ -61,11 +64,12 @@ for idx in range(len(class_ids)):
     transferable_sample = []
     test_dir = '{}_t{}'.format(args.test_dir, class_ids[idx])
     test_set = datasets.ImageFolder(test_dir, data_transform)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=0, pin_memory=True)
     target_acc = 0.
     target_test_size = 0.
     for i, (img, _) in enumerate(test_loader):
-        img = img.cuda()
+        if str(device) != 'cpu':
+            img = img.cuda()
         adv_out = model_t(normalize(img.clone().detach()))
         target_acc += torch.sum(adv_out.argmax(dim=-1) == (class_ids[idx])).item()
         target_test_size += img.size(0)

@@ -23,11 +23,11 @@ class CustomDataSet(Dataset):
         self.y = []
 
         dataset = np.load(data_file).transpose()
-        dataset = np.transpose(dataset, (0, 2, 3, 1))
+        dataset = np.transpose(dataset, (3, 1, 0, 2))
 
         self.x = dataset
 
-        for i in range (0, len(self.x)):
+        for i in range(0, len(self.x)):
             self.y.append(target)
 
     def __len__(self):
