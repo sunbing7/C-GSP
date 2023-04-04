@@ -64,17 +64,17 @@ for idx in range(len(class_ids)):
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=True)
     target_acc = 0.
     target_test_size = 0.
-    for i, (img_cpu, _) in enumerate(test_loader):
-        img = img_cpu.cuda()
+    for i, (img, _) in enumerate(test_loader):
+        img = img.cuda()
         adv_out = model_t(normalize(img.clone().detach()))
         target_acc += torch.sum(adv_out.argmax(dim=-1) == (class_ids[idx])).item()
         target_test_size += img.size(0)
-        _transferable_sample = img_cpu[adv_out.argmax(dim=-1) == (class_ids[idx])]
+        _transferable_sample = img[adv_out.argmax(dim=-1) == (class_ids[idx])].cpu().detach().numpy()
         transferable_sample.extend(_transferable_sample)
     
     sr[idx] = target_acc / target_test_size
     print('sr: {}'.format(sr))
-    print('number of transferable sample:{}'.format(transferable_sample))
+    print('number of transferable sample:{}'.format(len(transferable_sample)))
     np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_tae.npy'),
             transferable_sample)
 
