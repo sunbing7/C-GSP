@@ -16,6 +16,7 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser(description='Conditional Adversarial Generator')
 parser.add_argument('--data_dir', default='data/ImageNet1k', help='ImageNet Validation Data')
 parser.add_argument('--test_dir', default='', help='Testing Data')
+parser.add_argument('--result_dir', default='', help='Result output')
 parser.add_argument('--batch_size', type=int, default=10, help='Batch Size')
 parser.add_argument('--model_t',type=str, default= 'res152',  help ='Model under attack : vgg16, vgg19, dense121' )
 args = parser.parse_args()
@@ -57,17 +58,24 @@ class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
 # Evaluation
 sr = np.zeros(len(class_ids))
 for idx in range(len(class_ids)):
+    transferable_sample = []
     test_dir = '{}_t{}'.format(args.test_dir, class_ids[idx])
     test_set = datasets.ImageFolder(test_dir, data_transform)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=True)
     target_acc = 0.
     target_test_size = 0.
-    for i, (img, _) in enumerate(test_loader):
-        img = img.cuda()
+    for i, (img_cpu, _) in enumerate(test_loader):
+        img = img_cpu.cuda()
         adv_out = model_t(normalize(img.clone().detach()))
         target_acc += torch.sum(adv_out.argmax(dim=-1) == (class_ids[idx])).item()
         target_test_size += img.size(0)
+        _transferable_sample = img_cpu[adv_out.argmax(dim=-1) == (class_ids[idx])]
+        transferable_sample.extend(_transferable_sample)
     
     sr[idx] = target_acc / target_test_size
     print('sr: {}'.format(sr))
+    print('number of transferable sample:{}'.format(transferable_sample))
+    np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_tae.npy'),
+            transferable_sample)
+
 print('target acc:{:.4%}\t target_test_size:{}'.format(sr.mean(), target_test_size))
