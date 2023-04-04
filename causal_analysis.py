@@ -25,6 +25,7 @@ parser.add_argument('--model_t', type=str, default='res152', help='Model under a
 parser.add_argument('--layer', type=int, default=1, help='layer')
 parser.add_argument('--num_hidden', type=int, default=4096, help='Number of hidden neurons')
 parser.add_argument('--option', type=str, default='causal', help='Run options')
+parser.add_argument('--do_val', type=int, default=10, help='do value')
 args = parser.parse_args()
 print(args)
 
@@ -95,7 +96,7 @@ def solve_causal(data_loader, model, arch, target_class, num_sample, normalize, 
     return out
 
 
-def solve_do_act(data_loader, model, arch, target_class, num_sample, normalize, mask, split_layer=43, use_cuda=True):
+def solve_do_act(data_loader, model, arch, target_class, num_sample, normalize, mask, do_val=10, split_layer=43, use_cuda=True):
     #split the model
     model1, model2 = split_model(model, arch, split_layer=split_layer)
 
@@ -124,7 +125,7 @@ def solve_do_act(data_loader, model, arch, target_class, num_sample, normalize, 
                 dense_output_ = torch.clone(dense_output).cpu().detach().numpy()
             else:
                 dense_output_ = torch.clone(dense_output)
-            do_act = np.ones(shape=dense_output.shape) * 10
+            do_act = np.ones(shape=dense_output.shape) * do_val
             masks = np.tile(mask, (len(dense_output), 1))
             do_hidden = torch.from_numpy(np.add(do_act * masks, dense_output_)).float()
             if use_cuda:
@@ -478,7 +479,7 @@ def do_activation():
         mask = np.zeros(args.num_hidden)
         mask[list(act_top.astype(int))] = 1
 
-        sr = solve_do_act(test_loader, model_t, args.model_t, class_ids[idx], 1000, normalize, mask, split_layer=43, use_cuda=(str(device) != 'cpu'))
+        sr = solve_do_act(test_loader, model_t, args.model_t, class_ids[idx], 1000, normalize, mask, do_val=args.do_val, split_layer=43, use_cuda=(str(device) != 'cpu'))
 
         print('sr: {}'.format(sr))
 
@@ -534,7 +535,7 @@ def do_causal():
         mask = np.zeros(args.num_hidden)
         mask[list(causal_top.astype(int))] = 1
 
-        sr = solve_do_act(test_loader, model_t, args.model_t, class_ids[idx], 1000, normalize, mask, split_layer=43, use_cuda=(str(device) != 'cpu'))
+        sr = solve_do_act(test_loader, model_t, args.model_t, class_ids[idx], 1000, normalize, mask, do_val=args.do_val, split_layer=43, use_cuda=(str(device) != 'cpu'))
 
         print('sr: {}'.format(sr))
 
