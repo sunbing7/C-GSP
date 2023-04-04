@@ -306,6 +306,9 @@ def causality_analysis():
             test_dir = '{}_t{}'.format(args.test_dir, class_ids[idx])
             test_set = datasets.ImageFolder(test_dir, data_transform)
         elif args.test_type == 'npy':
+            data_transform = transforms.Compose([
+                transforms.ToTensor(),
+            ])
             test_file = '{}_t{}_tae.npy'.format(args.model_t, class_ids[idx],)
             test_set = CustomDataSet(os.path.join(args.test_dir, test_file), target=class_ids[idx], transform=data_transform)
         test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=4,
