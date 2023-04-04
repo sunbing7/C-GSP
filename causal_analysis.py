@@ -94,7 +94,7 @@ def solve_causal(data_loader, model, arch, target_class, num_sample, normalize, 
     return out
 
 
-def solve_act(data_loader, model, arch, target_class, num_sample, split_layer=43, use_cuda=True):
+def solve_act(data_loader, model, arch, target_class, num_sample, normalize, split_layer=43, use_cuda=True):
     #split the model
     model1, model2 = split_model(model, arch, split_layer=split_layer)
 
@@ -113,7 +113,7 @@ def solve_act(data_loader, model, arch, target_class, num_sample, split_layer=43
 
         # compute output
         with torch.no_grad():
-            dense_output = model1(input)
+            dense_output = model1(normalize(input.clone().detach()))
             dense_this = np.mean(dense_output.cpu().detach().numpy(), axis=0)  # 4096
 
         dense_avg.append(dense_this) #batchx4096
@@ -357,11 +357,18 @@ def activation_analysis():
     # Evaluation
     sr = np.zeros(len(class_ids))
     for idx in range(len(class_ids)):
-        test_dir = '{}_t{}'.format(args.test_dir, class_ids[idx])
-        test_set = datasets.ImageFolder(test_dir, data_transform)
-        test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=4,
+        if args.test_type == 'png':
+            test_dir = '{}_t{}'.format(args.test_dir, class_ids[idx])
+            test_set = datasets.ImageFolder(test_dir, data_transform)
+        elif args.test_type == 'npy':
+            data_transform = transforms.Compose([
+                transforms.ToTensor(),
+            ])
+            test_file = '{}_t{}_tae.npy'.format(args.model_t, class_ids[idx],)
+            test_set = CustomDataSet(os.path.join(args.test_dir, test_file), target=class_ids[idx], transform=data_transform)
+        test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=0,
                                                   pin_memory=True)
-        neuron_ranking = solve_act(test_loader, model_t, args.model_t, class_ids[idx], 1000, split_layer=43,
+        neuron_ranking = solve_act(test_loader, model_t, args.model_t, class_ids[idx], 1000, normalize, split_layer=43,
                                       use_cuda=(str(device) != 'cpu'))
         # find outstanding neuron neuron_ranking shape: 4096x2
         temp = neuron_ranking
