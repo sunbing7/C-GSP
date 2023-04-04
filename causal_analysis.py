@@ -23,6 +23,7 @@ parser.add_argument('--result_dir', default='', help='Result output')
 parser.add_argument('--batch_size', type=int, default=10, help='Batch Size')
 parser.add_argument('--model_t', type=str, default='res152', help='Model under attack : vgg16, vgg19, dense121')
 parser.add_argument('--layer', type=int, default=1, help='layer')
+parser.add_argument('--num_hidden', type=int, default=4096, help='Number of hidden neurons')
 parser.add_argument('--option', type=str, default='causal', help='Run options')
 args = parser.parse_args()
 print(args)
@@ -92,6 +93,44 @@ def solve_causal(data_loader, model, arch, target_class, num_sample, normalize, 
     out = do_predict_avg[:, [0, (target_class + 1)]]
 
     return out
+
+
+def solve_do_act(data_loader, model, arch, target_class, num_sample, normalize, mask, split_layer=43, use_cuda=True):
+    #split the model
+    model1, model2 = split_model(model, arch, split_layer=split_layer)
+
+    # switch to evaluate mode
+    #model.eval()
+    model1.eval()
+    model2.eval()
+
+    total_num_samples = 0
+    target_acc = 0.
+    target_test_size = 0.
+    for input, gt in data_loader:
+        if total_num_samples >= num_sample:
+            break
+        if use_cuda:
+            gt = gt.cuda()
+            input = input.cuda()
+
+        # compute output
+        with torch.no_grad():
+            dense_output = model1(normalize(input.clone().detach()))
+            ori_output = model2(dense_output)
+            #full_output = model(normalize(input.clone().detach()))
+            #dense_hidden_ = torch.clone(torch.reshape(dense_output, (dense_output.shape[0], -1)))
+            do_act = np.ones(shape=dense_output.shape) * 10
+            masks = np.tile(mask, (len(dense_output), 1))
+            do_hidden = np.add(do_act * masks, dense_output).float()
+            if use_cuda:
+                do_hidden = do_hidden.cuda()
+            output = model2(do_hidden)
+            target_acc += torch.sum(output.argmax(dim=-1) == target_class).item()
+            target_test_size += input.size(0)
+    sr = target_acc / target_test_size
+
+    return sr
 
 
 def solve_act(data_loader, model, arch, target_class, num_sample, normalize, split_layer=43, use_cuda=True):
@@ -384,6 +423,61 @@ def activation_analysis():
                 outstanding_neuron)
 
 
+def do_activation():
+    model_t = load_model(args)
+    if str(device) != 'cpu':
+        model_t = model_t.cuda()
+    '''
+    if str(device) == 'cuda:0':
+        model_t = nn.DataParallel(model_t).cuda()
+    else:
+        model_t = nn.DataParallel(model_t)
+    '''
+    model_t.eval()
+
+    # Setup-Data
+    data_transform = transforms.Compose([
+        transforms.Resize(img_size),
+        transforms.ToTensor(),
+    ])
+
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+
+
+    def normalize(t):
+        t[:, 0, :, :] = (t[:, 0, :, :] - mean[0]) / std[0]
+        t[:, 1, :, :] = (t[:, 1, :, :] - mean[1]) / std[1]
+        t[:, 2, :, :] = (t[:, 2, :, :] - mean[2]) / std[2]
+        return t
+
+
+    class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
+    #class_ids = np.array([150])
+
+    # Evaluation
+    sr = np.zeros(len(class_ids))
+    for idx in range(len(class_ids)):
+        if args.test_type == 'png':
+            test_dir = '{}_t{}'.format(args.test_dir, class_ids[idx])
+            test_set = datasets.ImageFolder(test_dir, data_transform)
+        elif args.test_type == 'npy':
+            data_transform = transforms.Compose([
+                transforms.ToTensor(),
+            ])
+            test_file = '{}_t{}_tae.npy'.format(args.model_t, class_ids[idx],)
+            test_set = CustomDataSet(os.path.join(args.test_dir, test_file), target=class_ids[idx], transform=data_transform)
+        test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=0,
+                                                  pin_memory=True)
+        act_top = np.load(
+            os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_act_top.npy'))
+        mask = np.zeros(args.num_hidden)
+        mask[list(act_top.astype(int))] = 1
+
+        sr = solve_do_act(test_loader, model_t, args.model_t, class_ids[idx], 1000, normalize, mask, split_layer=43, use_cuda=(str(device) != 'cpu'))
+
+        print('sr: {}'.format(sr))
+
 def plot_compare():
     class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
     #class_ids = np.array([150])
@@ -404,3 +498,5 @@ if __name__ == '__main__':
         activation_analysis()
     elif args.option == 'plot':
         plot_compare()
+    elif args.option == 'do_act':
+        do_activation()
