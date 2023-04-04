@@ -133,7 +133,7 @@ def solve_do_act(data_loader, model, arch, target_class, num_sample, normalize, 
             target_acc += torch.sum(output.argmax(dim=-1) == target_class).item()
             target_test_size += input.size(0)
     sr = target_acc / target_test_size
-
+    print('[DEBUG] test sample size: {}'.format(target_test_size))
     return sr
 
 
