@@ -126,7 +126,7 @@ def solve_do_act(data_loader, model, arch, target_class, num_sample, normalize, 
                 dense_output_ = torch.clone(dense_output)
             do_act = np.ones(shape=dense_output.shape) * 10
             masks = np.tile(mask, (len(dense_output), 1))
-            do_hidden = np.add(do_act * masks, dense_output_).float()
+            do_hidden = torch.from_numpy(np.add(do_act * masks, dense_output_).astype(float))
             if use_cuda:
                 do_hidden = do_hidden.cuda()
             output = model2(do_hidden)
