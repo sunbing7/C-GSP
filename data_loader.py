@@ -22,7 +22,8 @@ class CustomDataSet(Dataset):
         self.transform = transform
         self.y = []
 
-        dataset = np.load(data_file)
+        dataset = np.load(data_file).transpose()
+        dataset = np.transpose(dataset, (0, 2, 3, 1))
 
         self.x = dataset
 
