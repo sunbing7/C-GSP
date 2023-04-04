@@ -13,10 +13,12 @@ from utils import *
 import torch.nn.functional as F
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from data_loader import CustomDataSet
 
 parser = argparse.ArgumentParser(description='Conditional Adversarial Generator')
 parser.add_argument('--data_dir', default='data/ImageNet1k', help='ImageNet Validation Data')
 parser.add_argument('--test_dir', default='', help='Testing Data')
+parser.add_argument('--test_type', type=str, default='png', help='test sample type')
 parser.add_argument('--result_dir', default='', help='Result output')
 parser.add_argument('--batch_size', type=int, default=10, help='Batch Size')
 parser.add_argument('--model_t', type=str, default='res152', help='Model under attack : vgg16, vgg19, dense121')
@@ -300,8 +302,12 @@ def causality_analysis():
     # Evaluation
     sr = np.zeros(len(class_ids))
     for idx in range(len(class_ids)):
-        test_dir = '{}_t{}'.format(args.test_dir, class_ids[idx])
-        test_set = datasets.ImageFolder(test_dir, data_transform)
+        if args.test_type == 'png':
+            test_dir = '{}_t{}'.format(args.test_dir, class_ids[idx])
+            test_set = datasets.ImageFolder(test_dir, data_transform)
+        elif args.test_type == 'npy':
+            test_file = '{}_t{}_tae.npy'.format(args.model_t, class_ids[idx],)
+            test_set = CustomDataSet(os.path.join(args.test_dir, test_file), target=class_ids[idx], transform=data_transform)
         test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=4,
                                                   pin_memory=True)
         neuron_ranking = solve_causal(test_loader, model_t, args.model_t, class_ids[idx], 1000, split_layer=43, use_cuda=(str(device) != 'cpu'))
