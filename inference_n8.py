@@ -22,6 +22,7 @@ parser.add_argument('--result_dir', default='', help='Result output')
 parser.add_argument('--batch_size', type=int, default=10, help='Batch Size')
 parser.add_argument('--model_t',type=str, default= 'res152',  help ='Model under attack : vgg16, vgg19, dense121' )
 parser.add_argument('--model_t_ae',type=str, default= 'res152',  help ='Model under attack : vgg16, vgg19, dense121' )
+parser.add_argument('--save_tae', type=int, default=0, help='if you want to save the transferable AEs')
 args = parser.parse_args()
 print(args)
 
@@ -91,7 +92,8 @@ for idx in range(len(class_ids)):
     sr[idx] = target_acc / target_test_size
     print('sr: {}'.format(sr))
     print('number of transferable sample:{}'.format(len(transferable_sample)))
-    np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_tae.npy'),
-            transferable_sample)
+    if args.save_tae:
+        np.save(os.path.join(args.result_dir, str(args.model_t) + '_t' + str(class_ids[idx]) + '_tae.npy'),
+                transferable_sample)
 
 print('target acc:{:.4%}\t target_test_size:{}'.format(sr.mean(), target_test_size))
