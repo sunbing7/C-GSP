@@ -12,10 +12,12 @@ from condgenerators import ConGeneratorResnet
 from utils import *
 import torch.nn.functional as F
 from tqdm import tqdm
+from data_loader import CustomDataSet
 
 parser = argparse.ArgumentParser(description='Conditional Adversarial Generator')
 parser.add_argument('--data_dir', default='data/ImageNet1k', help='ImageNet Validation Data')
 parser.add_argument('--test_dir', default='', help='Testing Data')
+parser.add_argument('--test_type', type=str, default='png', help='test sample type')
 parser.add_argument('--result_dir', default='', help='Result output')
 parser.add_argument('--batch_size', type=int, default=10, help='Batch Size')
 parser.add_argument('--model_t',type=str, default= 'res152',  help ='Model under attack : vgg16, vgg19, dense121' )
@@ -62,9 +64,18 @@ class_ids = np.array([150, 507, 62, 843, 426, 590, 715, 952])
 sr = np.zeros(len(class_ids))
 for idx in range(len(class_ids)):
     transferable_sample = []
-    test_dir = '{}_t{}'.format(args.test_dir, class_ids[idx])
-    test_set = datasets.ImageFolder(test_dir, data_transform)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=0, pin_memory=True)
+    if args.test_type == 'png':
+        test_dir = '{}_t{}'.format(args.test_dir, class_ids[idx])
+        test_set = datasets.ImageFolder(test_dir, data_transform)
+    elif args.test_type == 'npy':
+        data_transform = transforms.Compose([
+            transforms.ToTensor(),
+        ])
+        test_file = '{}_t{}_tae.npy'.format(args.model_t, class_ids[idx], )
+        test_set = CustomDataSet(os.path.join(args.test_dir, test_file), target=class_ids[idx],
+                                 transform=data_transform)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=0,
+                                              pin_memory=True)
     target_acc = 0.
     target_test_size = 0.
     for i, (img, _) in enumerate(test_loader):
