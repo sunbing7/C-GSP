@@ -22,6 +22,7 @@ parser.add_argument('--test_type', type=str, default='png', help='test sample ty
 parser.add_argument('--result_dir', default='', help='Result output')
 parser.add_argument('--batch_size', type=int, default=10, help='Batch Size')
 parser.add_argument('--model_t', type=str, default='res152', help='Model under attack : vgg16, vgg19, dense121')
+parser.add_argument('--model_t_ae',type=str, default= 'res152',  help ='Model under attack : vgg16, vgg19, dense121' )
 parser.add_argument('--layer', type=int, default=1, help='layer')
 parser.add_argument('--num_hidden', type=int, default=4096, help='Number of hidden neurons')
 parser.add_argument('--option', type=str, default='causal', help='Run options')
@@ -354,7 +355,7 @@ def causality_analysis():
             data_transform = transforms.Compose([
                 transforms.ToTensor(),
             ])
-            test_file = '{}_t{}_tae.npy'.format(args.model_t, class_ids[idx],)
+            test_file = '{}_t{}_tae.npy'.format(args.model_t_ae, class_ids[idx],)
             test_set = CustomDataSet(os.path.join(args.test_dir, test_file), target=class_ids[idx], transform=data_transform)
         test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=0,
                                                   pin_memory=True)
@@ -408,7 +409,7 @@ def activation_analysis():
             data_transform = transforms.Compose([
                 transforms.ToTensor(),
             ])
-            test_file = '{}_t{}_tae.npy'.format(args.model_t, class_ids[idx],)
+            test_file = '{}_t{}_tae.npy'.format(args.model_t_ae, class_ids[idx],)
             test_set = CustomDataSet(os.path.join(args.test_dir, test_file), target=class_ids[idx], transform=data_transform)
         test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=0,
                                                   pin_memory=True)
@@ -470,7 +471,7 @@ def do_activation():
             data_transform = transforms.Compose([
                 transforms.ToTensor(),
             ])
-            test_file = '{}_t{}_tae.npy'.format(args.model_t, class_ids[idx],)
+            test_file = '{}_t{}_tae.npy'.format(args.model_t_ae, class_ids[idx],)
             test_set = CustomDataSet(os.path.join(args.test_dir, test_file), target=class_ids[idx], transform=data_transform)
         test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=0,
                                                   pin_memory=True)
@@ -526,7 +527,7 @@ def do_causal():
             data_transform = transforms.Compose([
                 transforms.ToTensor(),
             ])
-            test_file = '{}_t{}_tae.npy'.format(args.model_t, class_ids[idx],)
+            test_file = '{}_t{}_tae.npy'.format(args.model_t_ae, class_ids[idx],)
             test_set = CustomDataSet(os.path.join(args.test_dir, test_file), target=class_ids[idx], transform=data_transform)
         test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=0,
                                                   pin_memory=True)
